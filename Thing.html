@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Thing</title>
+	<script src="two.js"></script>
+	<script src="blockly_compressed.js"></script>
+	<script src="blocks_compressed.js"></script>
+	<script src="javascript_compressed.js"></script>
+	<script src="customBlocks.js"></script>
+	<script src="en.js"></script>
+	<script src="liquidfun.js"></script>
+    <style type="text/css">
+
+        html, body {
+            height: 100%;
+			margin: 0 0;
+        }
+
+        .panes-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .left-pane {
+            width: 50%;
+            height: 100%;
+        }
+
+        .panes-separator {
+            width: 15px;
+            height: 100%;
+            position: relative;
+            cursor: col-resize;
+        }
+
+        .right-pane {
+            height: 100%;
+            flex: auto;
+        }
+		
+		#top-bar {
+			height: 100px;
+			background: #eee;
+		}
+		#graphics-output {
+			background: #555;
+		}
+		#bottom-bar {
+			height: 300px;
+			background: #eee;
+		}
+		#textarea {
+			overflow: auto;
+			height: 100%;
+		}
+		
+		.bar {
+			
+		}
+
+    </style>
+
+</head>
+
+<body>
+<div class="panes-container" id="panes-container">
+    <div class="left-pane" id="left-pane">
+		<div class="bar" id="top-bar">
+		    <button onclick="showCode()">Show JavaScript</button>
+			<button onclick="runCode()">Run JavaScript</button>
+		</div>
+        <div id="graphics-output"></div>
+		<div class="bar" id="bottom-bar">
+			<div id="textarea"></div>
+		</div>
+    </div>
+    <div class="panes-separator" id="panes-separator"></div>
+    <div class="right-pane" id="right-pane">
+		<div id="blocklyArea" style="height: 100%; width: 100%"></div>
+    </div>
+</div>
+
+<xml id="toolbox" style="display: none;">
+  <block type="statement">
+    <field name="code">//JavaScript</field>
+  </block>
+  <block type="expression">
+    <field name="code">"JavaScript expression"</field>
+  </block>
+  <block type="new_shape">
+    <field name="shape">circle</field>
+    <value name="x">
+      <block type="expression">
+        <field name="code">0</field>
+      </block>
+    </value>
+    <value name="y">
+      <block type="expression">
+        <field name="code">1</field>
+      </block>
+    </value>
+    <value name="r">
+      <block type="expression">
+        <field name="code">1</field>
+      </block>
+    </value>
+    <value name="color">
+      <shadow type="colour_picker">
+        <field name="COLOUR">#ff0000</field>
+      </shadow>
+    </value>
+  </block>
+</xml>
+
+
+<script>
+
+	
+    var leftPane = document.getElementById('left-pane');
+    var rightPane = document.getElementById('right-pane');
+    var paneSep = document.getElementById('panes-separator');
+	var blocklyArea = document.getElementById('blocklyArea');
+    var demoWorkspace = Blockly.inject(blocklyArea,
+		{media: 'BlocklyMedia/', toolbox: document.getElementById('toolbox')});
+	var two = new Two({}).appendTo(document.getElementById('graphics-output'));
+	var layer;
+
+	setupResizing();
+	setupWorld();
+		 
+	function resizePage(){
+		Blockly.svgResize(demoWorkspace)
+		two.renderer.setSize(leftPane.offsetWidth, leftPane.offsetHeight-400);
+		two.width = leftPane.offsetWidth
+		two.height = leftPane.offsetHeight-404
+	}
+
+    function resizePanes(e) {
+		var pos = (e.pageX || e.touches[0].screenX) / window.innerWidth * 100;
+		if (pos < 30) {
+			pos = 30;
+		}
+		if (pos > 70) {
+			pos = 70;
+		}
+		leftPane.style.width = pos + '%';
+		resizePage();
+    }
+	function setupResizing() {
+		paneSep.addEventListener('mousedown', function (e) {
+			window.addEventListener('mousemove', resizePanes);
+		});
+		window.addEventListener('mouseup', function (e) {
+			window.removeEventListener('mousemove', resizePanes);
+		});
+		paneSep.addEventListener('touchstart', function (e) {
+			window.addEventListener('touchmove', resizePanes);
+		});
+		window.addEventListener('touchend', function (e) {
+			window.removeEventListener('touchmove', resizePanes);
+		});
+		window.addEventListener('resize',resizePage);
+		resizePage();
+	}
+		
+    function showCode() {
+      Blockly.JavaScript.INFINITE_LOOP_TRAP = null;
+      var code = Blockly.JavaScript.workspaceToCode(demoWorkspace);
+      document.getElementById("textarea").innerHTML = code.split('\n').join('<br>');
+    }
+
+    function runCode() {
+      window.LoopTrap = 1000;
+      Blockly.JavaScript.INFINITE_LOOP_TRAP =
+          'if (--window.LoopTrap == 0) throw "Infinite loop.";\n';
+      var code = Blockly.JavaScript.workspaceToCode(demoWorkspace);
+      Blockly.JavaScript.INFINITE_LOOP_TRAP = null;
+      try {
+        eval(code);
+      } catch (e) {
+        alert(e);
+      }
+    }
+	
+	function nextFrame() {
+		world.Step(1/60,8,3);
+		layer.translation.set(two.width / 2, two.height / 2);
+		for(var i = 0; i<layer.children.length; i++){
+			layer.children[i].translation.set(world.bodies[i+1].GetTransform().p.x,-world.bodies[i+1].GetTransform().p.y);
+		}
+		
+		two.update();
+		
+		requestAnimationFrame(nextFrame);
+	}
+
+	function setupWorld() {
+		layer = two.makeGroup();
+		var gravity = new b2Vec2(0, -10);
+		world = new b2World(gravity);
+
+		var bd = new b2BodyDef();
+		var ground = world.CreateBody(bd);
+		var edge = new b2EdgeShape();
+		edge.Set(new b2Vec2(-40, 0), new b2Vec2(40, 0));
+		ground.CreateFixtureFromShape(edge);
+
+		layer.scale = 10;
+		
+		nextFrame();
+	}
+
+</script>
+
+</body>
+</html>
