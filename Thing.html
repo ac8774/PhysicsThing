@@ -39,7 +39,7 @@
             height: 100%;
             flex: auto;
         }
-		
+
 		#top-bar {
 			height: 100px;
 			background: #eee;
@@ -55,9 +55,9 @@
 			overflow: auto;
 			height: 100%;
 		}
-		
+
 		.bar {
-			
+
 		}
 
     </style>
@@ -117,7 +117,7 @@
 
 <script>
 
-	
+
     var leftPane = document.getElementById('left-pane');
     var rightPane = document.getElementById('right-pane');
     var paneSep = document.getElementById('panes-separator');
@@ -130,7 +130,7 @@
 
 	setupResizing();
 	setupWorld();
-		 
+
 	function resizePage(){
 		Blockly.svgResize(workspace)
 		two.renderer.setSize(leftPane.offsetWidth, leftPane.offsetHeight-400);
@@ -166,7 +166,7 @@
 		window.addEventListener('resize',resizePage);
 		resizePage();
 	}
-		
+
     function showCode() {
       Blockly.JavaScript.INFINITE_LOOP_TRAP = null;
       var code = Blockly.JavaScript.workspaceToCode(workspace);
@@ -186,7 +186,7 @@
         alert(e);
       }
     }
-	
+
 	function nextFrame() {
 		world.Step(1/60,8,3);
 		layer.translation.set(two.width / 2, two.height / 2);
@@ -196,11 +196,11 @@
 				layer.children[i].rotation = -world.bodies[i].GetAngle();
 			}
 		}
-		
+
 		layer.scale = Math.min(two.width/80,two.height/60);
-		
+
 		two.update();
-		
+
 		requestAnimationFrame(nextFrame);
 	}
 
@@ -213,14 +213,14 @@
 		newEdge(-40, -30, -40, 30);
 		newEdge(40, -30, 40, 30);
 		newEdge(-40, 30, 40, 30);
-		
+
 		nextFrame();
 	}
-	
+
 	function resetWorld() {
-		
+
 	}
-	
+
 	function newEdge(x1, y1, x2, y2) {
 		var bd = new b2BodyDef();
 		var ground = world.CreateBody(bd);
@@ -229,7 +229,7 @@
 		ground.CreateFixtureFromShape(edge);
 		layer.add(two.makeLine(x1, y1, x2, y2));
 	}
-	
+
 	function newCircle(r=1,x=0,y=1,color="",density=1) {
 		var circle = new b2CircleShape();
 		circle.radius = r;
@@ -258,7 +258,7 @@
 		layer.add(c);
 	}
 
-	
+
 	/**@constructor*/
 function QueryCallback(point) {
   this.point = point;
@@ -307,14 +307,14 @@ QueryCallback.prototype.ReportFixture = function(fixture) {
 	newCircle(1, p.x, p.y); // temporary
   });
 
-  graphicsOutput.addEventListener('mousemove', function(event) {
+  window.addEventListener('mousemove', function(event) {
     var p = getMouseCoords(event);
     if (that.mouseJoint) {
       that.mouseJoint.SetTarget(p);
     }
   });
 
-  graphicsOutput.addEventListener('mouseup', function(event) {
+  window.addEventListener('mouseup', function(event) {
     if (that.mouseJoint) {
       world.DestroyJoint(that.mouseJoint);
       that.mouseJoint = null;
@@ -322,7 +322,7 @@ QueryCallback.prototype.ReportFixture = function(fixture) {
   });
 
 
-	
+
 	function getMouseCoords(event) {
 		rect = graphicsOutput.getBoundingClientRect();
 		x = (event.clientX - rect.left - layer.translation._x) / layer.scale;
