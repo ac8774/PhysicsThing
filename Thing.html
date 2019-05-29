@@ -84,7 +84,7 @@
 
 <xml id="toolbox" style="display: none;">
   <block type="statement">
-    <field name="code">//JavaScript</field>
+    <field name="code">//JavaScript statement</field>
   </block>
   <block type="expression">
     <field name="code">"JavaScript expression"</field>
@@ -107,9 +107,9 @@
       </block>
     </value>
     <value name="color">
-      <shadow type="colour_picker">
+      <block type="colour_picker">
         <field name="COLOUR">#ff0000</field>
-      </shadow>
+      </block>
     </value>
   </block>
 </xml>
@@ -122,16 +122,17 @@
     var rightPane = document.getElementById('right-pane');
     var paneSep = document.getElementById('panes-separator');
 	var blocklyArea = document.getElementById('blocklyArea');
-    var demoWorkspace = Blockly.inject(blocklyArea,
+	var graphicsOutput = document.getElementById('graphics-output');
+    var workspace = Blockly.inject(blocklyArea,
 		{media: 'BlocklyMedia/', toolbox: document.getElementById('toolbox')});
-	var two = new Two({}).appendTo(document.getElementById('graphics-output'));
+	var two = new Two({type: Two.Types.webgl}).appendTo(graphicsOutput);
 	var layer;
 
 	setupResizing();
 	setupWorld();
 		 
 	function resizePage(){
-		Blockly.svgResize(demoWorkspace)
+		Blockly.svgResize(workspace)
 		two.renderer.setSize(leftPane.offsetWidth, leftPane.offsetHeight-400);
 		two.width = leftPane.offsetWidth
 		two.height = leftPane.offsetHeight-404
@@ -139,15 +140,16 @@
 
     function resizePanes(e) {
 		var pos = (e.pageX || e.touches[0].screenX) / window.innerWidth * 100;
-		if (pos < 30) {
-			pos = 30;
+		if (pos < 22) {
+			pos = 20;
 		}
-		if (pos > 70) {
-			pos = 70;
+		if (pos > 78) {
+			pos = 80;
 		}
 		leftPane.style.width = pos + '%';
 		resizePage();
     }
+
 	function setupResizing() {
 		paneSep.addEventListener('mousedown', function (e) {
 			window.addEventListener('mousemove', resizePanes);
@@ -167,15 +169,16 @@
 		
     function showCode() {
       Blockly.JavaScript.INFINITE_LOOP_TRAP = null;
-      var code = Blockly.JavaScript.workspaceToCode(demoWorkspace);
-      document.getElementById("textarea").innerHTML = code.split('\n').join('<br>');
+      var code = Blockly.JavaScript.workspaceToCode(workspace);
+	  alert(code);
+      //document.getElementById("textarea").innerHTML = code.split('\n').join('<br>');
     }
 
     function runCode() {
       window.LoopTrap = 1000;
       Blockly.JavaScript.INFINITE_LOOP_TRAP =
           'if (--window.LoopTrap == 0) throw "Infinite loop.";\n';
-      var code = Blockly.JavaScript.workspaceToCode(demoWorkspace);
+      var code = Blockly.JavaScript.workspaceToCode(workspace);
       Blockly.JavaScript.INFINITE_LOOP_TRAP = null;
       try {
         eval(code);
@@ -188,8 +191,13 @@
 		world.Step(1/60,8,3);
 		layer.translation.set(two.width / 2, two.height / 2);
 		for(var i = 0; i<layer.children.length; i++){
-			layer.children[i].translation.set(world.bodies[i+1].GetTransform().p.x,-world.bodies[i+1].GetTransform().p.y);
+			if(world.bodies[i].GetType()>0) {
+				layer.children[i].translation.set(world.bodies[i].GetTransform().p.x,-world.bodies[i].GetTransform().p.y);
+				layer.children[i].rotation = -world.bodies[i].GetAngle();
+			}
 		}
+		
+		layer.scale = Math.min(two.width/80,two.height/60);
 		
 		two.update();
 		
@@ -201,15 +209,125 @@
 		var gravity = new b2Vec2(0, -10);
 		world = new b2World(gravity);
 
+		newEdge(-40, -30, 40, -30);
+		newEdge(-40, -30, -40, 30);
+		newEdge(40, -30, 40, 30);
+		newEdge(-40, 30, 40, 30);
+		
+		nextFrame();
+	}
+	
+	function resetWorld() {
+		
+	}
+	
+	function newEdge(x1, y1, x2, y2) {
 		var bd = new b2BodyDef();
 		var ground = world.CreateBody(bd);
 		var edge = new b2EdgeShape();
-		edge.Set(new b2Vec2(-40, 0), new b2Vec2(40, 0));
+		edge.Set(new b2Vec2(x1, y1), new b2Vec2(x2, y2));
 		ground.CreateFixtureFromShape(edge);
+		layer.add(two.makeLine(x1, y1, x2, y2));
+	}
+	
+	function newCircle(r=1,x=0,y=1,color="",density=1) {
+		var circle = new b2CircleShape();
+		circle.radius = r;
+		bd = new b2BodyDef();
+		bd.type = b2_dynamicBody;
+		bd.position.Set(x, y);
+		var body = world.CreateBody(bd);
+		body.CreateFixtureFromShape(circle, density);
+		var c = two.makeCircle(0, 0, r);
+		c.noStroke();
+		c.fill = color==""?'#'+Math.floor(Math.random()*16777215).toString(16):color;
+		layer.add(c);
+	}
 
-		layer.scale = 10;
-		
-		nextFrame();
+	function newSquare(r=1,x=0,y=1,color="",density=1) {
+		var box = new b2PolygonShape();
+		box.SetAsBoxXY(r, r);
+		bd = new b2BodyDef();
+		bd.type = b2_dynamicBody;
+		bd.position.Set(x, y);
+		var body = world.CreateBody(bd);
+		body.CreateFixtureFromShape(box, density);
+		var c = two.makeRectangle(0, 0, 2*r, 2*r);
+		c.noStroke();
+		c.fill = color==""?'#'+Math.floor(Math.random()*16777215).toString(16):color;
+		layer.add(c);
+	}
+
+	
+	/**@constructor*/
+function QueryCallback(point) {
+  this.point = point;
+  this.fixture = null;
+}
+
+/**@return bool*/
+QueryCallback.prototype.ReportFixture = function(fixture) {
+  var body = fixture.body;
+  if (body.GetType() === b2_dynamicBody) {
+    var inside = fixture.TestPoint(this.point);
+    if (inside) {
+      this.fixture = fixture;
+      return true;
+    }
+  }
+  return false;
+};
+	that = {};
+	  var bd = new b2BodyDef;
+  g_groundBody = world.CreateBody(bd);
+  layer.add(two.makeGroup());
+  graphicsOutput.addEventListener('mousedown', function(event) {
+    var p = getMouseCoords(event);
+    var aabb = new b2AABB;
+    var d = new b2Vec2;
+
+    d.Set(0.01, 0.01);
+    b2Vec2.Sub(aabb.lowerBound, p, d);
+    b2Vec2.Add(aabb.upperBound, p, d);
+
+    var queryCallback = new QueryCallback(p);
+    world.QueryAABB(queryCallback, aabb);
+
+    if (queryCallback.fixture) {
+      var body = queryCallback.fixture.body;
+      var md = new b2MouseJointDef;
+      md.bodyA = g_groundBody;
+      md.bodyB = body;
+      md.target = p;
+      md.maxForce = 1000 * body.GetMass();
+      that.mouseJoint = world.CreateJoint(md);
+      body.SetAwake(true);
+    }
+	else
+	newCircle(1, p.x, p.y); // temporary
+  });
+
+  graphicsOutput.addEventListener('mousemove', function(event) {
+    var p = getMouseCoords(event);
+    if (that.mouseJoint) {
+      that.mouseJoint.SetTarget(p);
+    }
+  });
+
+  graphicsOutput.addEventListener('mouseup', function(event) {
+    if (that.mouseJoint) {
+      world.DestroyJoint(that.mouseJoint);
+      that.mouseJoint = null;
+    }
+  });
+
+
+	
+	function getMouseCoords(event) {
+		rect = graphicsOutput.getBoundingClientRect();
+		x = (event.clientX - rect.left - layer.translation._x) / layer.scale;
+		y = (layer.translation._y - (event.clientY - rect.top)) / layer.scale;
+		return new b2Vec2(x, y);
 	}
 
 </script>

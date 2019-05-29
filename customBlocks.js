@@ -56,7 +56,7 @@ Blockly.Blocks['new_shape'] = {
         .setCheck(null)
         .setAlign(Blockly.ALIGN_RIGHT)
         .appendField("new")
-        .appendField(new Blockly.FieldDropdown([["circle","circle"]]), "shape")
+        .appendField(new Blockly.FieldDropdown([["circle","circle"],["square","square"]]), "shape")
         .appendField("at x:");
     this.appendValueInput("y")
         .setCheck(null)
@@ -117,19 +117,9 @@ Blockly.JavaScript['new_shape'] = function(block) {
   var value_r = Blockly.JavaScript.valueToCode(block, 'r', Blockly.JavaScript.ORDER_ATOMIC);
   var value_color = Blockly.JavaScript.valueToCode(block, 'color', Blockly.JavaScript.ORDER_ATOMIC);
   // TODO: Assemble JavaScript into code variable.
-  var code =  
-
-    'var circle = new b2CircleShape();\n'+
-    'circle.radius = '+value_r+';\n'+
-    'bd = new b2BodyDef();\n'+
-    'bd.type = b2_dynamicBody;\n'+
-    'bd.position.Set('+value_x+' , '+value_y+');\n'+
-    'var body = world.CreateBody(bd);\n'+
-    'body.CreateFixtureFromShape(circle, 1);\n'+
-	'var c = two.makeCircle(0,0,'+value_r+');\n'+
-	'c.noStroke();\n'+
-	'c.fill = '+value_color+';\n'+
-	'layer.add(c);\n';
+  var code = "";
+  if(dropdown_shape=="circle") code = 'newCircle('+value_r+','+value_x+','+value_y+','+value_color+');\n';
+  if(dropdown_shape=="square") code = 'newSquare('+value_r+','+value_x+','+value_y+','+value_color+');\n';
   
   return code;
 };
