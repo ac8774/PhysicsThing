@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+
     <title>Thing</title>
 	<script src="two.js"></script>
 	<script src="blockly_compressed.js"></script>
@@ -281,7 +283,17 @@ QueryCallback.prototype.ReportFixture = function(fixture) {
 	  var bd = new b2BodyDef;
   g_groundBody = world.CreateBody(bd);
   layer.add(two.makeGroup());
-  graphicsOutput.addEventListener('mousedown', function(event) {
+  graphicsOutput.addEventListener('mousedown', mouseJointStart);
+  graphicsOutput.addEventListener('touchstart', mouseJointStart);
+
+  window.addEventListener('mousemove', mouseJointMove);
+  window.addEventListener('touchmove', mouseJointMove);
+
+  window.addEventListener('mouseup', mouseJointRemove);
+  window.addEventListener('touchend', mouseJointRemove);
+
+  function mouseJointStart(event) {
+    event.preventDefault();
     var p = getMouseCoords(event);
     var aabb = new b2AABB;
     var d = new b2Vec2;
@@ -303,30 +315,29 @@ QueryCallback.prototype.ReportFixture = function(fixture) {
       that.mouseJoint = world.CreateJoint(md);
       body.SetAwake(true);
     }
-	else
-	newCircle(1, p.x, p.y); // temporary
-  });
-
-  window.addEventListener('mousemove', function(event) {
+  else
+  newCircle(1, p.x, p.y); // temporary
+  }
+  function mouseJointMove(event) {
+    event.preventDefault();
     var p = getMouseCoords(event);
     if (that.mouseJoint) {
       that.mouseJoint.SetTarget(p);
     }
-  });
-
-  window.addEventListener('mouseup', function(event) {
+  }
+  function mouseJointRemove(event) {
+    event.preventDefault();
     if (that.mouseJoint) {
       world.DestroyJoint(that.mouseJoint);
       that.mouseJoint = null;
     }
-  });
-
-
+  }
 
 	function getMouseCoords(event) {
+    if(event instanceof TouchEvent) {e = event.touches[0]} else e = event;
 		rect = graphicsOutput.getBoundingClientRect();
-		x = (event.clientX - rect.left - layer.translation._x) / layer.scale;
-		y = (layer.translation._y - (event.clientY - rect.top)) / layer.scale;
+		x = (e.clientX - rect.left - layer.translation._x) / layer.scale;
+		y = (layer.translation._y - (e.clientY - rect.top)) / layer.scale;
 		return new b2Vec2(x, y);
 	}
 
