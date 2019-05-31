@@ -174,11 +174,12 @@
     window.addEventListener('mouseup', mouseJointRemove);
     window.addEventListener('touchend', mouseJointRemove);
 
-    that = {}
+    var mouseJoints = []
 
     function mouseJointStart(event) {
       event.preventDefault();
-      var p = getAllMouseCoords(event)[0].p;
+      var mouse = getAllMouseCoords(event)[0];
+      var p = mouse.p;
       var fixtures = fixturesAt(p);
 
       if (fixtures.length > 0 && fixtures[0].body.GetType() === b2_dynamicBody) {
@@ -188,7 +189,11 @@
         md.bodyB = body;
         md.target = p;
         md.maxForce = 1000 * body.GetMass();
-        that.mouseJoint = world.CreateJoint(md);
+        if(mouseJoints[mouse.id])
+        {
+          world.DestroyJoint(mouseJoints[mouse.id]);
+        }
+        mouseJoints[mouse.id] = world.CreateJoint(md);
         body.SetAwake(true);
       } else {
         newCircle(1, p.x, p.y);
@@ -197,39 +202,43 @@
     }
 
     function mouseJointMove(event) {
-      var p = getAllMouseCoords(event)[0].p;
-      if (that.mouseJoint) {
-        that.mouseJoint.SetTarget(p);
+      mice = getAllMouseCoords(event);
+      for(var m = 0; m<mice.length; m++)
+      {
+        mouse = mice[m];
+        var p = mouse.p;
+        if (mouseJoints[mouse.id]) {
+          mouseJoints[mouse.id].SetTarget(p);
+        }
       }
-      variable = event;
     }
 
     function mouseJointRemove(event) {
       event.preventDefault();
-      if (that.mouseJoint) {
-        world.DestroyJoint(that.mouseJoint);
-        that.mouseJoint = null;
+      var mouse = getAllMouseCoords(event)[0];
+      if (mouseJoints[mouse.id]) {
+        world.DestroyJoint(mouseJoints[mouse.id]);
+        mouseJoints[mouse.id] = null;
       }
-      variable2 = event;
     }
 
     function getAllMouseCoords(event) {
       if (event instanceof TouchEvent) {
-        return [getMouseCoords(event.changedTouches[0])]; //TODO multitouch
+        var ret = [];
+        for (var touch = 0; touch < event.changedTouches.length; touch++)
+        {
+          ret.push({p:getMouseCoords(event.changedTouches[touch]), id:1+event.changedTouches[touch].identifier})
+        }
+        return ret;
       } else {
-        return [getMouseCoords(event)]
+        return [{p:getMouseCoords(event), id: 0}]
       }
-
     }
-
     function getMouseCoords(e) {
       rect = canvas.getBoundingClientRect();
       x = (e.clientX - rect.left - camera.x) / camera.s;
       y = (camera.y - (e.clientY - rect.top)) / camera.s;
-      return {
-        p: new b2Vec2(x, y),
-        id: 0
-      };
+      return new b2Vec2(x, y);
     }
   </script>
 
