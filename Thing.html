@@ -1,10 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
-
   <title>Thing</title>
   <script src="liquidfun.js"></script>
   <style type="text/css">
@@ -15,19 +13,30 @@
       overflow: hidden
     }
   </style>
-
 </head>
-
 <body>
   <canvas id="canvas"></canvas>
-
   <script>
+
     var ctx = canvas.getContext('2d');
     var camera = {
       x: 0,
       y: 0,
       s: 1
     };
+    var mouseJoints = [];
+    var world;
+    var g_groundBody;
+
+    canvas.addEventListener('mousedown', mouseJointStart);
+    canvas.addEventListener('touchstart', mouseJointStart);
+
+    window.addEventListener('mousemove', mouseJointMove);
+    window.addEventListener('touchmove', mouseJointMove);
+
+    window.addEventListener('mouseup', mouseJointRemove);
+    window.addEventListener('touchend', mouseJointRemove);
+
     setupWorld();
     nextFrame();
 
@@ -35,13 +44,11 @@
     function nextFrame() {
       world.Step(1 / 60, 8, 3);
 
-
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       camera.x = canvas.width / 2;
       camera.y = canvas.height / 2
       camera.s = Math.min(canvas.width / 21, canvas.height / 21);
-
 
       ctx.lineWidth = 0.15;
       ctx.lineCap = "round";
@@ -69,9 +76,9 @@
       }
       ctx.restore();
 
-
       requestAnimationFrame(nextFrame);
     }
+
 
     function setupWorld() {
       var gravity = new b2Vec2(0, -10);
@@ -109,9 +116,11 @@
       };
     }
 
+
     function resetWorld() {
 
     }
+
 
     function newEdge(x1, y1, x2, y2) {
       var edge = new b2EdgeShape();
@@ -146,6 +155,7 @@
       this.point = point;
       this.fixtures = [];
     }
+
     QueryCallback.prototype.ReportFixture = function(fixture) {
       if (fixture.TestPoint(this.point)) {
         this.fixtures.push(fixture);
@@ -165,23 +175,12 @@
       return queryCallback.fixtures;
     }
 
-    canvas.addEventListener('mousedown', mouseJointStart);
-    canvas.addEventListener('touchstart', mouseJointStart);
-
-    window.addEventListener('mousemove', mouseJointMove);
-    window.addEventListener('touchmove', mouseJointMove);
-
-    window.addEventListener('mouseup', mouseJointRemove);
-    window.addEventListener('touchend', mouseJointRemove);
-
-    var mouseJoints = []
 
     function mouseJointStart(event) {
       event.preventDefault();
       var mouse = getAllMouseCoords(event)[0];
       var p = mouse.p;
       var fixtures = fixturesAt(p);
-
       if (fixtures.length > 0 && fixtures[0].body.GetType() === b2_dynamicBody) {
         var body = fixtures[0].body;
         var md = new b2MouseJointDef;
@@ -189,8 +188,7 @@
         md.bodyB = body;
         md.target = p;
         md.maxForce = 1000 * body.GetMass();
-        if(mouseJoints[mouse.id])
-        {
+        if (mouseJoints[mouse.id]) {
           world.DestroyJoint(mouseJoints[mouse.id]);
         }
         mouseJoints[mouse.id] = world.CreateJoint(md);
@@ -202,10 +200,9 @@
     }
 
     function mouseJointMove(event) {
-      mice = getAllMouseCoords(event);
-      for(var m = 0; m<mice.length; m++)
-      {
-        mouse = mice[m];
+      var mice = getAllMouseCoords(event);
+      for (var m = 0; m < mice.length; m++) {
+        var mouse = mice[m];
         var p = mouse.p;
         if (mouseJoints[mouse.id]) {
           mouseJoints[mouse.id].SetTarget(p);
@@ -222,24 +219,33 @@
       }
     }
 
+
     function getAllMouseCoords(event) {
       if (event instanceof TouchEvent) {
         var ret = [];
-        for (var touch = 0; touch < event.changedTouches.length; touch++)
-        {
-          ret.push({p:getMouseCoords(event.changedTouches[touch]), id:1+event.changedTouches[touch].identifier})
+        for (var touch = 0; touch < event.changedTouches.length; touch++) {
+          ret.push({
+            p: getMouseCoords(event.changedTouches[touch]),
+            id: 1 + event.changedTouches[touch].identifier
+          })
         }
         return ret;
       } else {
-        return [{p:getMouseCoords(event), id: 0}]
+        return [{
+          p: getMouseCoords(event),
+          id: 0
+        }]
       }
     }
+
     function getMouseCoords(e) {
-      rect = canvas.getBoundingClientRect();
-      x = (e.clientX - rect.left - camera.x) / camera.s;
-      y = (camera.y - (e.clientY - rect.top)) / camera.s;
+      var rect = canvas.getBoundingClientRect();
+      var x = (e.clientX - rect.left - camera.x) / camera.s;
+      var y = (camera.y - (e.clientY - rect.top)) / camera.s;
       return new b2Vec2(x, y);
     }
+
+
   </script>
 
 </body>
