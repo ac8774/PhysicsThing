@@ -84,13 +84,7 @@
       var gravity = new b2Vec2(0, -10);
       world = new b2World(gravity);
 
-      var bd = new b2BodyDef;
-      g_groundBody = world.CreateBody(bd);
-
-      newEdge(-10, -10, 10, -10);
-      newEdge(-10, -10, -10, 10);
-      newEdge(10, -10, 10, 10);
-      newEdge(-10, 10, 10, 10);
+      resetWorld();
 
       b2EdgeShape.prototype.render = function() {
         ctx.beginPath();
@@ -118,7 +112,27 @@
 
 
     function resetWorld() {
+      if (world !== null) {
+        while (world.joints.length > 0) {
+          world.DestroyJoint(world.joints[0]);
+        }
 
+        while (world.bodies.length > 0) {
+          world.DestroyBody(world.bodies[0]);
+        }
+
+        while (world.particleSystems.length > 0) {
+          world.DestroyParticleSystem(world.particleSystems[0]);
+        }
+      }
+      
+      var bd = new b2BodyDef;
+      g_groundBody = world.CreateBody(bd);
+
+      newEdge(-10, -10, 10, -10);
+      newEdge(-10, -10, -10, 10);
+      newEdge(10, -10, 10, 10);
+      newEdge(-10, 10, 10, 10);
     }
 
 
