@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
@@ -14,10 +15,10 @@
     }
   </style>
 </head>
+
 <body>
   <canvas id="canvas"></canvas>
   <script>
-
     var ctx = canvas.getContext('2d');
     var camera = {
       x: 0,
@@ -28,18 +29,26 @@
     var world;
     var g_groundBody;
 
-    canvas.addEventListener('mousedown', mouseJointStart);
-    canvas.addEventListener('touchstart', mouseJointStart);
+    canvas.addEventListener('mousedown', onTouchStartOrMouseDown);
+    canvas.addEventListener('touchstart', onTouchStartOrMouseDown);
 
-    window.addEventListener('mousemove', mouseJointMove);
-    window.addEventListener('touchmove', mouseJointMove);
+    window.addEventListener('mousemove', onTouchMoveOrMouseMove);
+    window.addEventListener('touchmove', onTouchMoveOrMouseMove);
 
-    window.addEventListener('mouseup', mouseJointRemove);
-    window.addEventListener('touchend', mouseJointRemove);
+    window.addEventListener('mouseup', onTouchEndOrMouseUp);
+    window.addEventListener('touchend', onTouchEndOrMouseUp);
+
+    window.addEventListener('deviceorientation', deviceOrientationHandler);
 
     setupWorld();
     nextFrame();
 
+    function deviceOrientationHandler (eventData) {
+      var gravX = 30*Math.sin(eventData.gamma/180*Math.PI);
+      var gravY = -30*Math.sin(eventData.beta/180*Math.PI);
+
+      world.SetGravity(new b2Vec2(gravX, gravY));
+    }
 
     function nextFrame() {
       world.Step(1 / 60, 8, 3);
@@ -125,7 +134,7 @@
           world.DestroyParticleSystem(world.particleSystems[0]);
         }
       }
-      
+
       var bd = new b2BodyDef;
       g_groundBody = world.CreateBody(bd);
 
@@ -189,11 +198,8 @@
       return queryCallback.fixtures;
     }
 
-
-    function mouseJointStart(event) {
-      event.preventDefault();
-      var mouse = getAllMouseCoords(event)[0];
-      var p = mouse.p;
+    function startTouch(touch) {
+      var p = touch.p;
       var fixtures = fixturesAt(p);
       if (fixtures.length > 0 && fixtures[0].body.GetType() === b2_dynamicBody) {
         var body = fixtures[0].body;
@@ -202,35 +208,53 @@
         md.bodyB = body;
         md.target = p;
         md.maxForce = 1000 * body.GetMass();
-        if (mouseJoints[mouse.id]) {
-          world.DestroyJoint(mouseJoints[mouse.id]);
+        if (mouseJoints[touch.id]) {
+          world.DestroyJoint(mouseJoints[touch.id]);
         }
-        mouseJoints[mouse.id] = world.CreateJoint(md);
+        mouseJoints[touch.id] = world.CreateJoint(md);
         body.SetAwake(true);
       } else {
         newCircle(1, p.x, p.y);
-        newSquare(1, p.x, p.y);
+        //newSquare(1, p.x, p.y);
       }
     }
 
-    function mouseJointMove(event) {
-      var mice = getAllMouseCoords(event);
-      for (var m = 0; m < mice.length; m++) {
-        var mouse = mice[m];
-        var p = mouse.p;
-        if (mouseJoints[mouse.id]) {
-          mouseJoints[mouse.id].SetTarget(p);
-        }
+    function moveTouch(touch) {
+      if (mouseJoints[touch.id]) {
+        mouseJoints[touch.id].SetTarget(touch.p);
       }
     }
 
-    function mouseJointRemove(event) {
+    function endTouch(touch) {
+      if (mouseJoints[touch.id]) {
+        world.DestroyJoint(mouseJoints[touch.id]);
+        mouseJoints[touch.id] = null;
+      }
+    }
+
+    var trackedTouches = [];
+
+    function onTouchStartOrMouseDown(event) {
       event.preventDefault();
-      var mouse = getAllMouseCoords(event)[0];
-      if (mouseJoints[mouse.id]) {
-        world.DestroyJoint(mouseJoints[mouse.id]);
-        mouseJoints[mouse.id] = null;
+      var touch = getAllMouseCoords(event)[0];
+      trackedTouches[touch.id] = touch;
+      startTouch(touch);
+    }
+
+    function onTouchMoveOrMouseMove(event) {
+      var touches = getAllMouseCoords(event);
+      for (var t = 0; t < touches.length; t++) {
+        var touch = touches[t];
+        moveTouch(touch);
       }
+    }
+
+    function onTouchEndOrMouseUp(event) {
+      event.preventDefault();
+      var touch = getAllMouseCoords(event)[0];
+      console.log(Date.now() - trackedTouches[touch.id].time);
+      trackedTouches[touch.id] = null;
+      endTouch(touch);
     }
 
 
@@ -238,28 +262,28 @@
       if (event instanceof TouchEvent) {
         var ret = [];
         for (var touch = 0; touch < event.changedTouches.length; touch++) {
-          ret.push({
-            p: getMouseCoords(event.changedTouches[touch]),
-            id: 1 + event.changedTouches[touch].identifier
-          })
+          ret.push(getMouseCoords(event.changedTouches[touch]))
         }
         return ret;
       } else {
-        return [{
-          p: getMouseCoords(event),
-          id: 0
-        }]
+        return [getMouseCoords(event)]
       }
     }
 
     function getMouseCoords(e) {
       var rect = canvas.getBoundingClientRect();
-      var x = (e.clientX - rect.left - camera.x) / camera.s;
-      var y = (camera.y - (e.clientY - rect.top)) / camera.s;
-      return new b2Vec2(x, y);
+      var canvasX = e.clientX - rect.left;
+      var canvasY = e.clientY - rect.top;
+      var cameraX = (canvasX - camera.x) / camera.s;
+      var cameraY = (camera.y - canvasY) / camera.s;
+      return {
+        canvasX: canvasX,
+        canvasY: canvasY,
+        p: new b2Vec2(cameraX, cameraY),
+        id: e.identifier || 99,
+        time: Date.now()
+      };
     }
-
-
   </script>
 
 </body>
