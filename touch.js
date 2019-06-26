@@ -14,10 +14,8 @@ var trackedTouches = [];
 function onTouchStartOrMouseDown(event) {
   event.preventDefault();
   var touch = getAllMouseCoords(event)[0];
-  trackedTouches[touch.id] = touch;
-  setTimeout(function(){
-    startTouch(touch);
-  }, 50)
+  trackedTouches[touch.id] = {start: touch};
+  startTouch(touch);
 }
 
 function onTouchMoveOrMouseMove(event) {
@@ -31,7 +29,6 @@ function onTouchMoveOrMouseMove(event) {
 function onTouchEndOrMouseUp(event) {
   event.preventDefault();
   var touch = getAllMouseCoords(event)[0];
-  console.log(Date.now() - trackedTouches[touch.id].time);
   trackedTouches[touch.id] = null;
   endTouch(touch);
 }
@@ -62,4 +59,30 @@ function getMouseCoords(e) {
     id: e.identifier || 99,
     time: Date.now()
   };
+}
+
+
+
+function QueryCallback(point) {
+  this.point = point;
+  this.fixtures = [];
+}
+
+QueryCallback.prototype.ReportFixture = function(fixture) {
+  if (fixture.TestPoint(this.point)) {
+    this.fixtures.push(fixture);
+  }
+  return false;
+};
+
+function fixturesAt(p) {
+  var aabb = new b2AABB;
+  var d = new b2Vec2;
+  d.Set(0.01, 0.01);
+  b2Vec2.Sub(aabb.lowerBound, p, d);
+  b2Vec2.Add(aabb.upperBound, p, d);
+
+  var queryCallback = new QueryCallback(p);
+  world.QueryAABB(queryCallback, aabb);
+  return queryCallback.fixtures;
 }

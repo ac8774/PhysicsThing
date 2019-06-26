@@ -12,7 +12,8 @@
     body {
       height: 100%;
       margin: 0 0;
-      overflow: hidden
+      overflow: hidden;
+      background-color: black;
     }
   </style>
 </head>
@@ -52,6 +53,7 @@
       camera.y = canvas.height / 2
       camera.s = Math.min(canvas.width / 21, canvas.height / 21);
 
+      ctx.strokeStyle = "#FFF";
       ctx.lineWidth = 0.15;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
@@ -166,30 +168,6 @@
     }
 
 
-    function QueryCallback(point) {
-      this.point = point;
-      this.fixtures = [];
-    }
-
-    QueryCallback.prototype.ReportFixture = function(fixture) {
-      if (fixture.TestPoint(this.point)) {
-        this.fixtures.push(fixture);
-      }
-      return false;
-    };
-
-    function fixturesAt(p) {
-      var aabb = new b2AABB;
-      var d = new b2Vec2;
-      d.Set(0.01, 0.01);
-      b2Vec2.Sub(aabb.lowerBound, p, d);
-      b2Vec2.Add(aabb.upperBound, p, d);
-
-      var queryCallback = new QueryCallback(p);
-      world.QueryAABB(queryCallback, aabb);
-      return queryCallback.fixtures;
-    }
-
     function startTouch(touch) {
       var p = touch.p;
       var fixtures = fixturesAt(p);
@@ -207,7 +185,6 @@
         body.SetAwake(true);
       } else {
         newCircle(1, p.x, p.y);
-        //newSquare(1, p.x, p.y);
       }
     }
 
